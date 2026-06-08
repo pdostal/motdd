@@ -136,18 +136,22 @@ async def cmd_pr(cli_mode: CLIMode, args: list[str]) -> int:
 
         if "@" in user_arg:
             parts = user_arg.split("@")
-            if len(parts) == 2:
+            if len(parts) == 2 and parts[0] == "":
                 # @username (default provider)
-                username = parts[1] if parts[0] == "" else parts[0]
+                username = parts[1]
                 provider = None
             elif len(parts) == 3 and parts[0] == "":
                 # @provider@username
                 provider = parts[1]
                 username = parts[2]
-            else:
+            elif len(parts) == 2:
                 # provider@username
                 provider = parts[0]
                 username = parts[1]
+            else:
+                # Shouldn't happen, but default to treating as plain username
+                username = user_arg
+                provider = None
 
             await cli_mode.show_user_prs(username, provider)
         else:
