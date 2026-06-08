@@ -15,7 +15,9 @@
       "Bash(osc help *)",
       "Bash(uv *)",
       "Bash(chmod *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ]
   }
 }
