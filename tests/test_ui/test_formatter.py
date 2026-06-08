@@ -165,3 +165,148 @@ def test_format_error() -> None:
     assert isinstance(panel, Panel)
     assert "Error" in panel.title
     assert "github" in panel.title
+
+
+def test_format_pull_requests_all_states() -> None:
+    """Test PR formatting with all possible states."""
+    formatter = Formatter()
+    now = datetime.now()
+
+    prs = [
+        # Draft PR
+        PullRequest(
+            id="1",
+            provider="github",
+            number=1,
+            title="Draft PR",
+            repo="owner/repo",
+            author="alice",
+            url="https://github.com/owner/repo/pull/1",
+            state="open",
+            draft=True,
+            updated_at=now,
+        ),
+        # Merged PR
+        PullRequest(
+            id="2",
+            provider="github",
+            number=2,
+            title="Merged PR",
+            repo="owner/repo",
+            author="alice",
+            url="https://github.com/owner/repo/pull/2",
+            state="merged",
+            updated_at=now,
+        ),
+        # Closed PR
+        PullRequest(
+            id="3",
+            provider="github",
+            number=3,
+            title="Closed PR",
+            repo="owner/repo",
+            author="alice",
+            url="https://github.com/owner/repo/pull/3",
+            state="closed",
+            updated_at=now,
+        ),
+        # Approved PR
+        PullRequest(
+            id="4",
+            provider="github",
+            number=4,
+            title="Approved PR",
+            repo="owner/repo",
+            author="alice",
+            url="https://github.com/owner/repo/pull/4",
+            state="open",
+            review_decision="approved",
+            updated_at=now,
+        ),
+        # Changes requested
+        PullRequest(
+            id="5",
+            provider="github",
+            number=5,
+            title="Changes Requested",
+            repo="owner/repo",
+            author="alice",
+            url="https://github.com/owner/repo/pull/5",
+            state="open",
+            review_decision="changes_requested",
+            updated_at=now,
+        ),
+    ]
+
+    panel = formatter.format_pull_requests(prs)
+    assert "Pull Requests (5)" in panel.title
+
+
+def test_format_builds_all_states() -> None:
+    """Test build formatting with all possible states."""
+    formatter = Formatter()
+
+    builds = [
+        # Succeeded
+        BuildStatus(
+            id="1",
+            provider="obs",
+            type="build",
+            title="Build succeeded",
+            status="succeeded",
+            url="https://build.opensuse.org/1",
+        ),
+        # Failed
+        BuildStatus(
+            id="2",
+            provider="obs",
+            type="build",
+            title="Build failed",
+            status="failed",
+            url="https://build.opensuse.org/2",
+        ),
+        # Building
+        BuildStatus(
+            id="3",
+            provider="obs",
+            type="build",
+            title="Building",
+            status="building",
+            url="https://build.opensuse.org/3",
+        ),
+        # Disabled
+        BuildStatus(
+            id="4",
+            provider="obs",
+            type="build",
+            title="Disabled",
+            status="disabled",
+            url="https://build.opensuse.org/4",
+        ),
+    ]
+
+    panel = formatter.format_builds(builds)
+    assert "Build Status (4)" in panel.title
+
+
+def test_format_review_section_with_restarted() -> None:
+    """Test formatting review section with restarted review."""
+    formatter = Formatter()
+
+    reviewed = [
+        PullRequest(
+            id="pr-1",
+            provider="github",
+            number=123,
+            title="Review restarted",
+            repo="org/repo",
+            author="developer",
+            url="https://github.com/org/repo/pull/123",
+            state="open",
+            review_restarted=True,
+            updated_at=datetime.now(),
+        )
+    ]
+
+    panel = formatter.format_review_section([], reviewed)
+    assert isinstance(panel, Panel)
