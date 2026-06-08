@@ -4,6 +4,7 @@ import os
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
@@ -305,6 +306,18 @@ class Formatter:
             title=f"Reviews ({len(to_review)} pending, {len(reviewed)} reviewed, {total} total)",
             border_style=self.theme.border,
         )
+
+    def format_section_header(self, title: str) -> Rule:
+        """
+        Create a section header rule.
+
+        Args:
+            title: Section title
+
+        Returns:
+            Rich Rule with section header
+        """
+        return Rule(title, style=self.theme.header, align="left")
 
     def format_error(self, provider: str, error_msg: str) -> Panel:
         """

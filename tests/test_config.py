@@ -16,7 +16,7 @@ def test_config_defaults() -> None:
         assert config.get_theme() == "default"
         assert config.get_cache_ttl() == 300
         assert config.get_recent_activity_days() == 30
-        assert config.get_reviewed_prs_days() == 7
+        assert config.get_reviewed_prs_days() == 5
 
 
 def test_config_loading() -> None:

@@ -17,7 +17,13 @@
       "Bash(chmod *)",
       "Bash(git *)",
       "Bash(cat)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(gh *)",
+      "Bash(command *)",
+      "Bash(glab auth *)",
+      "Bash(osc user *)",
+      "Bash(tea login *)",
+      "Bash(python3 *)"
     ]
   }
 }

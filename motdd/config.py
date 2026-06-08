@@ -20,7 +20,7 @@ class Config:
         "general": {
             "default_provider": "github",
             "recent_activity_days": 30,
-            "reviewed_prs_days": 7,
+            "reviewed_prs_days": 5,
             "cache_ttl_seconds": 300,
             "theme": "default",
         },
@@ -31,21 +31,24 @@ class Config:
         },
     }
 
-    def __init__(self, config_path: Path | None = None):
+    def __init__(self, config_path: Path | None = None, auto_detect: bool = True):
         """
         Initialize configuration.
 
         Args:
             config_path: Path to config file (defaults to ~/.config/motdd.toml)
+            auto_detect: If True and config file doesn't exist, auto-detect providers
         """
         self.config_path = config_path or self.DEFAULT_CONFIG_PATH
+        self.auto_detected = False
         self.data: dict[str, Any] = {}
-        self._load()
+        self._load(auto_detect=auto_detect)
 
-    def _load(self) -> None:
-        """Load configuration from file."""
+    def _load(self, auto_detect: bool = True) -> None:
+        """Load configuration from file (auto-detection handled separately)."""
         if not self.config_path.exists():
-            # Use default configuration
+            # Use default configuration (no providers)
+            # Auto-detection will be handled by load_with_autodetect() if needed
             self.data = self.DEFAULT_VALUES.copy()
             return
 
@@ -58,6 +61,22 @@ class Config:
 
         except Exception as e:
             raise ConfigError(f"Failed to load config from {self.config_path}: {e}")
+
+    async def load_with_autodetect(self) -> None:
+        """Auto-detect and load providers if config file doesn't exist."""
+        if self.config_path.exists():
+            return  # Config already loaded from file
+
+        try:
+            from motdd.detector import detect_authenticated_providers
+
+            detected = await detect_authenticated_providers()
+            self.data["providers"] = detected
+            self.auto_detected = True
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning(f"Auto-detection failed: {e}, using defaults")
 
     def _merge_with_defaults(self, loaded_data: dict) -> dict:
         """Merge loaded data with default values."""
@@ -177,7 +196,7 @@ default_provider = "github"
 recent_activity_days = 30
 
 # Number of days to show already-reviewed PRs
-reviewed_prs_days = 7
+reviewed_prs_days = 5
 
 # Cache TTL in seconds (default: 5 minutes)
 cache_ttl_seconds = 300
@@ -260,5 +279,83 @@ enable_quick_actions = true
 
         with open(save_path, "w") as f:
             f.write(self.generate_template())
+
+        return save_path
+
+    def save_with_detected_providers(
+        self, providers: dict[str, list[dict[str, Any]]], path: Path | None = None
+    ) -> Path:
+        """
+        Save configuration file with auto-detected providers.
+
+        Args:
+            providers: Dict mapping provider types to list of provider configs
+            path: Path to save config (defaults to ~/.config/motdd.toml)
+
+        Returns:
+            Path where config was saved
+        """
+        save_path = path or self.config_path
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Start with general settings
+        config_lines = [
+            "# MOTDD Configuration File (Auto-Generated)",
+            "# See https://github.com/pdostal/motdd for full documentation",
+            "",
+            "[general]",
+            "# Default provider for @username syntax",
+            'default_provider = "github"',
+            "",
+            '# Number of days to consider for "recent" activity filtering',
+            "recent_activity_days = 30",
+            "",
+            "# Number of days to show already-reviewed PRs",
+            "reviewed_prs_days = 5",
+            "",
+            "# Cache TTL in seconds (default: 5 minutes)",
+            "cache_ttl_seconds = 300",
+            "",
+            "# Color theme: default, light, solarized, nord",
+            'theme = "default"',
+            "",
+        ]
+
+        # Add detected providers
+        for provider_type, configs in providers.items():
+            if not configs:
+                continue
+
+            config_lines.append(f"# {provider_type.capitalize()} configuration")
+            for config in configs:
+                config_lines.append(f"[[providers.{provider_type}]]")
+                config_lines.append(f'name = "{config["name"]}"')
+                if "host" in config:
+                    config_lines.append(f'host = "{config["host"]}"')
+                if "cli_tool" in config:
+                    config_lines.append(f'cli_tool = "{config["cli_tool"]}"')
+                if "api_url" in config:
+                    config_lines.append(f'api_url = "{config["api_url"]}"')
+                config_lines.append("")
+
+        # Add interactive mode settings
+        config_lines.extend(
+            [
+                "# Interactive mode settings",
+                "[interactive]",
+                "# Auto-refresh interval in seconds (default: 5 minutes)",
+                "refresh_interval_seconds = 300",
+                "",
+                "# Enable vim-style navigation keys (j/k)",
+                "enable_vim_keys = true",
+                "",
+                "# Enable quick actions in detail view",
+                "enable_quick_actions = true",
+                "",
+            ]
+        )
+
+        with open(save_path, "w") as f:
+            f.write("\n".join(config_lines))
 
         return save_path

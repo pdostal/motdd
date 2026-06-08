@@ -25,24 +25,35 @@ class GitHubProvider(BaseProvider):
 
             notifications = []
             for item in data:
-                # Skip notifications from my own PRs and PRs I'm reviewing
-                # (these will be shown in the review/pr sections)
+                # Skip notifications that will be shown in other sections
                 reason = item.get("reason", "")
-                if reason in ["author", "review_requested", "security_alert"]:
-                    subject = item.get("subject", {})
-                    notif = Notification(
-                        id=item["id"],
-                        provider=self.name,
-                        type=self._map_notification_type(reason),
-                        title=subject.get("title", ""),
-                        repo=item.get("repository", {}).get("full_name", ""),
-                        url=subject.get("url", "").replace("api.github.com/repos", "github.com"),
-                        updated_at=datetime.fromisoformat(
-                            item["updated_at"].replace("Z", "+00:00")
-                        ),
-                        unread=item.get("unread", True),
-                    )
-                    notifications.append(notif)
+                if reason in ["author", "review_requested"]:
+                    # author = shown in "My Pull Requests" section
+                    # review_requested = shown in "Reviews" section
+                    title = item.get("subject", {}).get("title", "")
+                    logger.debug(f"Skipping notification (reason={reason}): {title}")
+                    continue
+
+                # Show all other notifications (security_alert, agent_session_finished,
+                # comment, mention, push, ci_activity, team_mention, discussion, etc.)
+                subject = item.get("subject", {})
+
+                # Get URL (some notifications like agent_session_finished don't have URLs)
+                url = subject.get("url", "") or ""
+                if url:
+                    url = url.replace("api.github.com/repos", "github.com")
+
+                notif = Notification(
+                    id=item["id"],
+                    provider=self.name,
+                    type=self._map_notification_type(reason),
+                    title=subject.get("title", ""),
+                    repo=item.get("repository", {}).get("full_name", ""),
+                    url=url,
+                    updated_at=datetime.fromisoformat(item["updated_at"].replace("Z", "+00:00")),
+                    unread=item.get("unread", True),
+                )
+                notifications.append(notif)
 
             return notifications
 
@@ -53,14 +64,15 @@ class GitHubProvider(BaseProvider):
     async def get_my_prs(self) -> list[PullRequest]:
         """Get my pull requests."""
         try:
+            # Use search instead of list to get repository info
             data = await self._run_command(
                 [
-                    "pr",
-                    "list",
+                    "search",
+                    "prs",
                     "--author",
                     "@me",
                     "--json",
-                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,statusCheckRollup,reviewDecision",
+                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,author",
                     "--limit",
                     "100",
                 ],
@@ -86,7 +98,7 @@ class GitHubProvider(BaseProvider):
                     "--review-requested",
                     "@me",
                     "--json",
-                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,statusCheckRollup,reviewDecision",
+                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,author",
                     "--limit",
                     "100",
                 ],
@@ -113,7 +125,7 @@ class GitHubProvider(BaseProvider):
                     "--reviewed-by",
                     "@me",
                     "--json",
-                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,statusCheckRollup,reviewDecision",
+                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,author",
                     "--limit",
                     "50",
                 ],
@@ -140,7 +152,7 @@ class GitHubProvider(BaseProvider):
                     "--author",
                     username,
                     "--json",
-                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,statusCheckRollup,reviewDecision",
+                    "number,title,url,state,isDraft,repository,createdAt,updatedAt,author",
                     "--limit",
                     "100",
                 ],
@@ -213,10 +225,14 @@ class GitHubProvider(BaseProvider):
 
     def _parse_pr(self, data: dict) -> PullRequest:
         """Parse PR data from gh CLI."""
+        # Get repository name (from repository object or fall back to unknown)
         repo_data = data.get("repository", {})
-        repo_name = repo_data.get("nameWithOwner", "unknown")
+        if isinstance(repo_data, dict):
+            repo_name = repo_data.get("nameWithOwner", "unknown")
+        else:
+            repo_name = "unknown"
 
-        # Parse CI status
+        # Parse CI status (not available in gh search prs, only in gh pr list)
         ci_status = None
         rollup = data.get("statusCheckRollup")
         if rollup:
@@ -231,13 +247,22 @@ class GitHubProvider(BaseProvider):
                 elif all(s == "SUCCESS" for s in statuses):
                     ci_status = "success"
 
+        # Get author (structure differs between gh pr list and gh search prs)
+        author_data = data.get("author")
+        if isinstance(author_data, dict):
+            author = author_data.get("login", "unknown")
+        elif isinstance(author_data, str):
+            author = author_data
+        else:
+            author = "unknown"
+
         return PullRequest(
             id=f"github-{repo_name}-{data['number']}",
             provider=self.name,
             number=data["number"],
             title=data["title"],
             repo=repo_name,
-            author=data.get("author", {}).get("login", "unknown"),
+            author=author,
             url=data["url"],
             state=data.get("state", "OPEN").lower(),
             review_decision=(

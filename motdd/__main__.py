@@ -80,6 +80,12 @@ For more information: https://github.com/pdostal/motdd
         help="Enable debug output",
     )
 
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-detect authenticated CLI tools (use with init command)",
+    )
+
     # Subcommands
     parser.add_argument(
         "command",
@@ -98,13 +104,42 @@ For more information: https://github.com/pdostal/motdd
     return parser
 
 
-async def cmd_init(config: Config) -> int:
+async def cmd_init(config: Config, auto: bool = False) -> int:
     """Initialize configuration file."""
-    config_path = config.save_template()
-    print(f"Created config template at: {config_path}")
-    print("\nEdit the config file to add your provider settings, then run:")
-    print("  motdd all")
-    return 0
+    if auto:
+        # Auto-detect and save providers
+        from motdd.detector import detect_authenticated_providers
+
+        detected = await detect_authenticated_providers()
+        total_providers = sum(len(v) for v in detected.values())
+
+        if total_providers == 0:
+            print("No authenticated CLI tools detected.", file=sys.stderr)
+            print("\nMake sure you have authenticated with at least one CLI tool:")
+            print("  gh auth login      # GitHub")
+            print("  glab auth login    # GitLab")
+            print("  osc                # OBS/IBS (interactive setup)")
+            print("  tea login          # Gitea")
+            return 1
+
+        config_path = config.save_with_detected_providers(detected)
+        print(f"Created config at: {config_path}")
+        print(f"\nAuto-detected {total_providers} authenticated provider(s):")
+        for provider_type, configs in detected.items():
+            for cfg in configs:
+                host = cfg.get("host", cfg.get("api_url", ""))
+                print(f"  - {provider_type}: {cfg['name']} ({host})")
+        print("\nYou can now run:")
+        print("  motdd all")
+        return 0
+    else:
+        # Create template
+        config_path = config.save_template()
+        print(f"Created config template at: {config_path}")
+        print("\nEdit the config file to add your provider settings, then run:")
+        print("  motdd all")
+        print("\nTip: Use 'motdd init --auto' to auto-detect authenticated CLI tools")
+        return 0
 
 
 async def cmd_all(cli_mode: CLIMode) -> int:
@@ -178,9 +213,22 @@ async def async_main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
+    # Configure logging based on verbosity
+    import logging
+
+    if args.debug:
+        # Debug mode: show all logs including DEBUG
+        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
+    elif args.verbose:
+        # Verbose mode: show INFO and above
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    else:
+        # Normal mode: suppress ERROR and below (only show CRITICAL)
+        logging.basicConfig(level=logging.CRITICAL)
+
     # Load config
     try:
-        config = Config(config_path=args.config)
+        config = Config(config_path=args.config, auto_detect=False)
     except Exception as e:
         print(f"Error loading config: {e}", file=sys.stderr)
         print("\nRun 'motdd init' to create a config file.", file=sys.stderr)
@@ -188,7 +236,11 @@ async def async_main() -> int:
 
     # Handle init command specially (doesn't need cache or CLI mode)
     if args.command == "init":
-        return await cmd_init(config)
+        return await cmd_init(config, auto=args.auto)
+
+    # Auto-detect providers if no config file exists
+    if not config.config_path.exists():
+        await config.load_with_autodetect()
 
     # Set up cache
     cache = Cache(ttl_seconds=config.get_cache_ttl())

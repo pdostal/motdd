@@ -56,6 +56,7 @@ class CLIMode:
 
     async def show_notifications(self) -> None:
         """Show notifications section."""
+        self.console.print(self.formatter.format_section_header("Notifications"))
         notifications = await self._get_all_notifications()
 
         if self.repo_filter:
@@ -66,6 +67,7 @@ class CLIMode:
 
     async def show_my_prs(self) -> None:
         """Show my PRs section."""
+        self.console.print(self.formatter.format_section_header("Pull Requests"))
         prs = await self._get_my_prs()
 
         if self.repo_filter:
@@ -76,6 +78,7 @@ class CLIMode:
 
     async def show_reviews(self) -> None:
         """Show reviews section."""
+        self.console.print(self.formatter.format_section_header("Reviews"))
         to_review = await self._get_prs_to_review()
         reviewed = await self._get_reviewed_prs()
 
@@ -107,12 +110,14 @@ class CLIMode:
 
     async def show_obs(self) -> None:
         """Show OBS section."""
+        self.console.print(self.formatter.format_section_header("Submit Requests (OBS)"))
         builds = await self._get_obs_data()
         panel = self.formatter.format_builds(builds, title="OBS")
         self.console.print(panel)
 
     async def show_ibs(self) -> None:
         """Show IBS section."""
+        self.console.print(self.formatter.format_section_header("Submit Requests (IBS)"))
         builds = await self._get_ibs_data()
         panel = self.formatter.format_builds(builds, title="IBS")
         self.console.print(panel)
@@ -193,6 +198,9 @@ class CLIMode:
 
         # Filter by age
         all_prs = filter_by_age(all_prs, days)
+
+        # Filter out merged PRs
+        all_prs = [pr for pr in all_prs if pr.state != "merged"]
 
         # Sort by updated_at descending
         all_prs.sort(key=lambda x: x.updated_at or x.created_at, reverse=True)
