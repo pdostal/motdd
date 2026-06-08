@@ -217,8 +217,8 @@ async def test_show_notifications_with_repo_filter(config):
     ):
         await cli_mode.show_notifications()
 
-    # Should print the panel
-    mock_print.assert_called_once()
+    # Should print section header and panel (2 calls)
+    assert mock_print.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -230,7 +230,8 @@ async def test_show_my_prs(cli_mode):
     ):
         await cli_mode.show_my_prs()
 
-    mock_print.assert_called_once()
+    # Should print section header and panel (2 calls)
+    assert mock_print.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -243,7 +244,8 @@ async def test_show_reviews(cli_mode):
     ):
         await cli_mode.show_reviews()
 
-    mock_print.assert_called_once()
+    # Should print section header and panel (2 calls)
+    assert mock_print.call_count == 2
 
 
 @pytest.mark.asyncio
