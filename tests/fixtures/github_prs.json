@@ -1,0 +1,45 @@
+[
+  {
+    "number": 123,
+    "title": "Add new feature",
+    "url": "https://github.com/owner/repo/pull/123",
+    "state": "OPEN",
+    "isDraft": false,
+    "repository": {
+      "nameWithOwner": "owner/repo"
+    },
+    "author": {
+      "login": "developer"
+    },
+    "createdAt": "2026-06-01T10:00:00Z",
+    "updatedAt": "2026-06-08T12:00:00Z",
+    "statusCheckRollup": {
+      "contexts": [
+        {"state": "SUCCESS"},
+        {"state": "SUCCESS"}
+      ]
+    },
+    "reviewDecision": "APPROVED"
+  },
+  {
+    "number": 124,
+    "title": "Fix bug in authentication",
+    "url": "https://github.com/owner/repo/pull/124",
+    "state": "OPEN",
+    "isDraft": true,
+    "repository": {
+      "nameWithOwner": "owner/repo"
+    },
+    "author": {
+      "login": "developer"
+    },
+    "createdAt": "2026-06-07T14:00:00Z",
+    "updatedAt": "2026-06-08T09:00:00Z",
+    "statusCheckRollup": {
+      "contexts": [
+        {"state": "PENDING"}
+      ]
+    },
+    "reviewDecision": null
+  }
+]
