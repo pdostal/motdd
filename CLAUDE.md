@@ -42,9 +42,9 @@ motdd/
 │   │   ├── obs.py            # ✅ OBS integration
 │   │   └── ibs.py            # ✅ IBS integration
 │   └── ui/
-│       ├── themes.py         # TODO: Color themes
-│       ├── formatter.py      # TODO: Rich renderables
-│       ├── cli_mode.py       # TODO: Static CLI output
+│       ├── themes.py         # ✅ Color themes (default, light, solarized, nord)
+│       ├── formatter.py      # ✅ Rich renderables for tables and panels
+│       ├── cli_mode.py       # ✅ Static CLI output with async data fetching
 │       └── interactive.py    # TODO: Textual TUI
 └── tests/
     ├── test_config.py        # ✅ Config tests
@@ -103,7 +103,7 @@ Follow conventional commits:
 
 ## Implementation Status
 
-### ✅ Completed (Phases 1-3)
+### ✅ Completed (Phases 1-4)
 
 **Phase 1: Project Setup**
 - [x] Project setup with uv
@@ -115,7 +115,7 @@ Follow conventional commits:
 - [x] Caching system with TTL
 - [x] Data models with serialization
 - [x] Utility functions (icons, filtering, links)
-- [x] Comprehensive test suite (55% coverage)
+- [x] Test suite (54% coverage)
 
 **Phase 3: Provider Integration**
 - [x] Provider base class and interface
@@ -126,6 +126,15 @@ Follow conventional commits:
 - [x] OBS provider implementation (osc CLI)
 - [x] IBS provider implementation (osc CLI)
 - [x] Provider tests with fixtures
+
+**Phase 4: UI Implementation**
+- [x] 4 color themes (default, light, solarized, nord)
+- [x] Data formatter for rich rendering
+- [x] CLI mode with async provider orchestration
+- [x] Panel and table formatting
+- [x] OSC 8 hyperlink support
+- [x] Terminal width detection
+- [x] UI tests
 
 ### 📋 TODO (Phases 4-9)
 
