@@ -8,6 +8,7 @@ from motdd.utils import (
     filter_by_repo,
     get_provider_icon,
     get_status_icon,
+    osc8_link,
     relative_time,
     truncate_text,
 )
@@ -158,3 +159,37 @@ def test_filter_by_age() -> None:
     # Filter to last 40 days
     filtered = filter_by_age(items, 40)
     assert len(filtered) == 2
+
+
+def test_osc8_link() -> None:
+    """Test OSC 8 hyperlink generation."""
+    url = "https://github.com/owner/repo/pull/123"
+    text = "PR #123"
+
+    # With fallback enabled (default)
+    link = osc8_link(url, text, fallback=True)
+    assert text in link
+    assert url in link
+
+    # Without fallback
+    link = osc8_link(url, text, fallback=False)
+    assert text in link
+
+    # Empty text - should return URL with parentheses
+    link = osc8_link(url, "", fallback=True)
+    assert url in link
+
+
+def test_relative_time_edge_cases() -> None:
+    """Test relative time edge cases."""
+    now = datetime.now()
+
+    # Weeks ago - should show weeks
+    past = now - timedelta(weeks=2)
+    result = relative_time(past)
+    assert "2w ago" in result or "1w ago" in result
+
+    # Months ago (more than 30 days)
+    past = now - timedelta(days=45)
+    result = relative_time(past)
+    assert "6w ago" in result or "1mo ago" in result or "45d ago" in result
