@@ -1,6 +1,5 @@
 """Tests for base provider."""
 
-
 import pytest
 
 from motdd.providers.base import BaseProvider, ProviderError
