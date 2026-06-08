@@ -1,0 +1,11 @@
+#!/bin/bash
+
+commit_msg=$(cat "$1")
+
+# Check for conventional commit format
+if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+"; then
+    echo "Error: Commit message must follow conventional commits format"
+    echo "Examples: feat: add notification filtering"
+    echo "          fix(cache): resolve TTL expiration bug"
+    exit 1
+fi

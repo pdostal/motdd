@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+echo "Running formatters and linters..."
+uv run black motdd tests
+uv run ruff check --fix motdd tests
+
+git add -u

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(command -v glab)",
+      "Bash(command -v fj)",
+      "Bash(command -v tea)",
+      "Bash(command -v osc)",
+      "Bash(glab version *)",
+      "Bash(fj --version)",
+      "Bash(tea --version)",
+      "Bash(osc --version)",
+      "Bash(fj --help)",
+      "Bash(osc help *)",
+      "Bash(uv *)",
+      "Bash(chmod *)",
+      "Bash(git *)"
+    ]
+  }
+}
