@@ -62,8 +62,8 @@ class CLIMode:
         if self.repo_filter:
             notifications = filter_by_repo(notifications, self.repo_filter)
 
-        panel = self.formatter.format_notifications(notifications)
-        self.console.print(panel)
+        output = self.formatter.format_notifications(notifications)
+        self.console.print(output)
 
     async def show_my_prs(self) -> None:
         """Show my PRs section."""
@@ -73,8 +73,8 @@ class CLIMode:
         if self.repo_filter:
             prs = filter_by_repo(prs, self.repo_filter)
 
-        panel = self.formatter.format_pull_requests(prs, title="My Pull Requests")
-        self.console.print(panel)
+        output = self.formatter.format_pull_requests(prs, title="My Pull Requests")
+        self.console.print(output)
 
     async def show_reviews(self) -> None:
         """Show reviews section."""
@@ -86,8 +86,8 @@ class CLIMode:
             to_review = filter_by_repo(to_review, self.repo_filter)
             reviewed = filter_by_repo(reviewed, self.repo_filter)
 
-        panel = self.formatter.format_review_section(to_review, reviewed)
-        self.console.print(panel)
+        output = self.formatter.format_review_section(to_review, reviewed)
+        self.console.print(output)
 
     async def show_user_prs(self, username: str, provider: str | None = None) -> None:
         """
@@ -112,15 +112,15 @@ class CLIMode:
         """Show OBS section."""
         self.console.print(self.formatter.format_section_header("Submit Requests (OBS)"))
         builds = await self._get_obs_data()
-        panel = self.formatter.format_builds(builds, title="OBS")
-        self.console.print(panel)
+        output = self.formatter.format_builds(builds, title="OBS")
+        self.console.print(output)
 
     async def show_ibs(self) -> None:
         """Show IBS section."""
         self.console.print(self.formatter.format_section_header("Submit Requests (IBS)"))
         builds = await self._get_ibs_data()
-        panel = self.formatter.format_builds(builds, title="IBS")
-        self.console.print(panel)
+        output = self.formatter.format_builds(builds, title="IBS")
+        self.console.print(output)
 
     async def _get_all_notifications(self) -> list[Notification]:
         """Get notifications from all providers."""
@@ -157,6 +157,9 @@ class CLIMode:
             else:
                 all_prs.extend(result)
 
+        # Filter to only active PRs (open or draft, not merged or closed)
+        all_prs = [pr for pr in all_prs if pr.state == "open"]
+
         # Sort by updated_at descending
         all_prs.sort(key=lambda x: x.updated_at or x.created_at, reverse=True)
         return all_prs
@@ -175,6 +178,9 @@ class CLIMode:
                     self.console.print(self.formatter.format_error(provider.name, str(result)))
             else:
                 all_prs.extend(result)
+
+        # Filter out merged PRs (only show open PRs needing review)
+        all_prs = [pr for pr in all_prs if pr.state != "merged"]
 
         # Sort by updated_at descending
         all_prs.sort(key=lambda x: x.updated_at or x.created_at, reverse=True)

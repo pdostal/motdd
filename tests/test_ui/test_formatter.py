@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from rich.panel import Panel
+from rich.text import Text
 
 from motdd.models import BuildStatus, Notification, PullRequest
 from motdd.ui.formatter import Formatter
@@ -18,10 +18,10 @@ def test_formatter_init() -> None:
 def test_format_notifications_empty() -> None:
     """Test formatting empty notifications."""
     formatter = Formatter()
-    panel = formatter.format_notifications([])
+    output = formatter.format_notifications([])
 
-    assert isinstance(panel, Panel)
-    assert panel.title == "Notifications"
+    assert isinstance(output, Text)
+    assert "No notifications" in str(output)
 
 
 def test_format_notifications() -> None:
@@ -40,19 +40,20 @@ def test_format_notifications() -> None:
         )
     ]
 
-    panel = formatter.format_notifications(notifications)
+    output = formatter.format_notifications(notifications)
 
-    assert isinstance(panel, Panel)
-    assert "Notifications (1)" in panel.title
+    assert isinstance(output, Text)
+    assert "Review my PR" in str(output)
 
 
 def test_format_pull_requests_empty() -> None:
     """Test formatting empty pull requests."""
     formatter = Formatter()
-    panel = formatter.format_pull_requests([])
+    output = formatter.format_pull_requests([])
 
-    assert isinstance(panel, Panel)
-    assert panel.title == "Pull Requests"
+    assert isinstance(output, Text)
+    # Panel titles no longer used with list format
+    # assert output.title == "Pull Requests"
 
 
 def test_format_pull_requests() -> None:
@@ -73,19 +74,20 @@ def test_format_pull_requests() -> None:
         )
     ]
 
-    panel = formatter.format_pull_requests(prs)
+    output = formatter.format_pull_requests(prs)
 
-    assert isinstance(panel, Panel)
-    assert "Pull Requests (1)" in panel.title
+    assert isinstance(output, Text)
+    assert "Add new feature" in str(output)
 
 
 def test_format_builds_empty() -> None:
     """Test formatting empty builds."""
     formatter = Formatter()
-    panel = formatter.format_builds([])
+    output = formatter.format_builds([])
 
-    assert isinstance(panel, Panel)
-    assert panel.title == "Build Status"
+    assert isinstance(output, Text)
+    # Panel titles no longer used with list format
+    # assert output.title == "Build Status"
 
 
 def test_format_builds() -> None:
@@ -103,19 +105,20 @@ def test_format_builds() -> None:
         )
     ]
 
-    panel = formatter.format_builds(builds)
+    output = formatter.format_builds(builds)
 
-    assert isinstance(panel, Panel)
-    assert "Build Status (1)" in panel.title
+    assert isinstance(output, Text)
+    assert "Submit package update" in str(output)
 
 
 def test_format_review_section_empty() -> None:
     """Test formatting empty review section."""
     formatter = Formatter()
-    panel = formatter.format_review_section([], [])
+    output = formatter.format_review_section([], [])
 
-    assert isinstance(panel, Panel)
-    assert panel.title == "Reviews"
+    assert isinstance(output, Text)
+    # Panel titles no longer used with list format
+    # assert output.title == "Reviews"
 
 
 def test_format_review_section() -> None:
@@ -150,21 +153,25 @@ def test_format_review_section() -> None:
         )
     ]
 
-    panel = formatter.format_review_section(to_review, reviewed)
+    output = formatter.format_review_section(to_review, reviewed)
 
-    assert isinstance(panel, Panel)
-    assert "1 pending" in panel.title
-    assert "1 reviewed" in panel.title
+    assert isinstance(output, Text)
+    # Check for PR titles in output
+    assert "Needs review" in str(output)
+    assert "Already reviewed" in str(output)
 
 
 def test_format_error() -> None:
     """Test formatting error message."""
-    formatter = Formatter()
-    panel = formatter.format_error("github", "Connection failed")
+    from rich.panel import Panel
 
-    assert isinstance(panel, Panel)
-    assert "Error" in panel.title
-    assert "github" in panel.title
+    formatter = Formatter()
+    output = formatter.format_error("github", "Connection failed")
+
+    # format_error still returns a Panel (not changed to list format)
+    assert isinstance(output, Panel)
+    assert "Error" in output.title
+    assert "github" in output.title
 
 
 def test_format_pull_requests_all_states() -> None:
@@ -238,8 +245,13 @@ def test_format_pull_requests_all_states() -> None:
         ),
     ]
 
-    panel = formatter.format_pull_requests(prs)
-    assert "Pull Requests (5)" in panel.title
+    output = formatter.format_pull_requests(prs)
+    # All 5 PRs should be in output
+    assert "Draft PR" in str(output)
+    assert "Merged PR" in str(output)
+    assert "Closed PR" in str(output)
+    assert "Approved PR" in str(output)
+    assert "Changes Requested" in str(output)
 
 
 def test_format_builds_all_states() -> None:
@@ -285,8 +297,12 @@ def test_format_builds_all_states() -> None:
         ),
     ]
 
-    panel = formatter.format_builds(builds)
-    assert "Build Status (4)" in panel.title
+    output = formatter.format_builds(builds)
+    # All 4 builds should be in output
+    assert "Build succeeded" in str(output)
+    assert "Build failed" in str(output)
+    assert "Building" in str(output)
+    assert "Disabled" in str(output)
 
 
 def test_format_review_section_with_restarted() -> None:
@@ -308,5 +324,5 @@ def test_format_review_section_with_restarted() -> None:
         )
     ]
 
-    panel = formatter.format_review_section([], reviewed)
-    assert isinstance(panel, Panel)
+    output = formatter.format_review_section([], reviewed)
+    assert isinstance(output, Text)

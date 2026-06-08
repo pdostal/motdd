@@ -5,7 +5,6 @@ import os
 from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
-from rich.table import Table
 from rich.text import Text
 
 from motdd.models import BuildStatus, Notification, PullRequest
@@ -15,7 +14,6 @@ from motdd.utils import (
     get_status_icon,
     osc8_link,
     relative_time,
-    truncate_text,
 )
 
 
@@ -36,242 +34,155 @@ class Formatter:
 
     def format_notifications(
         self, notifications: list[Notification], title: str = "Notifications"
-    ) -> Panel:
+    ) -> Text:
         """
-        Format notifications as a table panel.
+        Format notifications as a compact list.
 
         Args:
             notifications: List of notifications
-            title: Panel title
+            title: Section title (unused, kept for compatibility)
 
         Returns:
-            Rich Panel with formatted notifications
+            Rich Text with formatted notifications
         """
         if not notifications:
-            return Panel(
-                Text("No notifications", style=self.theme.muted),
-                title=title,
-                border_style=self.theme.border,
-            )
+            return Text("No notifications", style=self.theme.muted)
 
-        table = Table(show_header=True, header_style=self.theme.header, box=None)
-        table.add_column("", width=2)  # Icon
-        table.add_column("Repository", style=self.theme.info)
-        table.add_column("Title", style=self.theme.text)
-        table.add_column("Updated", style=self.theme.muted, justify="right")
-
+        lines = []
         for notif in notifications:
             icon = get_status_icon(notif.type, "notification")
             provider_icon = get_provider_icon(notif.provider)
 
             # Format title with link
-            title_text = truncate_text(notif.title, self.terminal_width // 3)
             if self._supports_links():
-                title_display = osc8_link(notif.url, title_text, fallback=False)
+                title_display = osc8_link(notif.url, notif.title, fallback=False)
             else:
-                title_display = title_text
+                title_display = notif.title
 
-            # Format repository
-            repo_display = f"{provider_icon} {notif.repo}"
+            # Format: icon [repo] title (time ago)
+            time_str = relative_time(notif.updated_at)
+            line = f"{icon} [{provider_icon} {notif.repo}] {title_display} ({time_str})"
+            lines.append(line)
 
-            table.add_row(
-                icon,
-                repo_display,
-                title_display,
-                relative_time(notif.updated_at),
-            )
+        return Text("\n".join(lines))
 
-        return Panel(
-            table,
-            title=f"{title} ({len(notifications)})",
-            border_style=self.theme.border,
-        )
-
-    def format_pull_requests(self, prs: list[PullRequest], title: str = "Pull Requests") -> Panel:
+    def format_pull_requests(self, prs: list[PullRequest], title: str = "Pull Requests") -> Text:
         """
-        Format pull requests as a table panel.
+        Format pull requests as a compact list.
 
         Args:
             prs: List of pull requests
-            title: Panel title
+            title: Section title (unused, kept for compatibility)
 
         Returns:
-            Rich Panel with formatted PRs
+            Rich Text with formatted PRs
         """
         if not prs:
-            return Panel(
-                Text("No pull requests", style=self.theme.muted),
-                title=title,
-                border_style=self.theme.border,
-            )
+            return Text("No pull requests", style=self.theme.muted)
 
-        table = Table(show_header=True, header_style=self.theme.header, box=None)
-        table.add_column("", width=2)  # Status icon
-        table.add_column("PR", width=6, style=self.theme.info)
-        table.add_column("Repository", style=self.theme.info)
-        table.add_column("Title", style=self.theme.text)
-        table.add_column("Author", style=self.theme.muted)
-        table.add_column("Updated", style=self.theme.muted, justify="right")
-
+        result = Text()
         for pr in prs:
-            # Determine status icon and color
+            # Determine status icon
             if pr.draft:
                 icon = get_status_icon("draft", "pr")
-                title_style = self.theme.pr_draft
             elif pr.state == "merged":
                 icon = get_status_icon("merged", "pr")
-                title_style = self.theme.pr_merged
             elif pr.state == "closed":
                 icon = get_status_icon("closed", "pr")
-                title_style = self.theme.pr_closed
             elif pr.review_decision == "approved":
                 icon = get_status_icon("approved", "pr")
-                title_style = self.theme.success
             elif pr.review_decision == "changes_requested":
                 icon = get_status_icon("changes_requested", "pr")
-                title_style = self.theme.error
             else:
                 icon = get_status_icon("pending", "pr")
-                title_style = self.theme.pr_open
 
             # Format title with link
-            title_text = truncate_text(pr.title, self.terminal_width // 3)
             if self._supports_links():
-                title_display = osc8_link(pr.url, title_text, fallback=False)
+                title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
-                title_display = title_text
+                title_display = pr.title
 
             # Format PR number
             provider_icon = get_provider_icon(pr.provider)
             pr_display = f"{provider_icon}#{pr.number}"
 
-            table.add_row(
-                icon,
-                pr_display,
-                pr.repo,
-                Text(title_display, style=title_style),
-                pr.author,
-                relative_time(pr.updated_at) if pr.updated_at else "",
-            )
+            # Format: icon PR#number [repo] title (time ago)
+            time_str = relative_time(pr.updated_at) if pr.updated_at else ""
+            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
+            result.append(line)
 
-        return Panel(
-            table,
-            title=f"{title} ({len(prs)})",
-            border_style=self.theme.border,
-        )
+        return result
 
-    def format_builds(self, builds: list[BuildStatus], title: str = "Build Status") -> Panel:
+    def format_builds(self, builds: list[BuildStatus], title: str = "Build Status") -> Text:
         """
-        Format build statuses as a table panel.
+        Format build statuses as a compact list.
 
         Args:
             builds: List of build statuses
-            title: Panel title
+            title: Section title (unused, kept for compatibility)
 
         Returns:
-            Rich Panel with formatted builds
+            Rich Text with formatted builds
         """
         if not builds:
-            return Panel(
-                Text("No builds", style=self.theme.muted),
-                title=title,
-                border_style=self.theme.border,
-            )
+            return Text("No builds", style=self.theme.muted)
 
-        table = Table(show_header=True, header_style=self.theme.header, box=None)
-        table.add_column("", width=2)  # Status icon
-        table.add_column("Type", width=10, style=self.theme.info)
-        table.add_column("Title", style=self.theme.text)
-        table.add_column("Status", style=self.theme.text)
-        table.add_column("Updated", style=self.theme.muted, justify="right")
-
+        lines = []
         for build in builds:
-            # Determine status icon and color
+            # Determine status icon
             icon = get_status_icon(build.status, "build")
 
-            if build.status in ["succeeded", "success"]:
-                status_style = self.theme.success
-            elif build.status in ["failed", "broken"]:
-                status_style = self.theme.error
-            elif build.status in ["building", "pending"]:
-                status_style = self.theme.warning
-            else:
-                status_style = self.theme.muted
-
             # Format title with link
-            title_text = truncate_text(build.title, self.terminal_width // 3)
             if self._supports_links() and build.url:
-                title_display = osc8_link(build.url, title_text, fallback=False)
+                title_display = osc8_link(build.url, build.title, fallback=False)
             else:
-                title_display = title_text
+                title_display = build.title
 
             # Format type
             provider_icon = get_provider_icon(build.provider)
             type_display = f"{provider_icon} {build.type}"
 
-            table.add_row(
-                icon,
-                type_display,
-                title_display,
-                Text(build.status.upper(), style=status_style),
-                relative_time(build.updated_at) if build.updated_at else "",
-            )
+            # Format: icon type title [status] (time ago)
+            time_str = relative_time(build.updated_at) if build.updated_at else ""
+            line = f"{icon} {type_display} {title_display} [{build.status}] ({time_str})"
+            lines.append(line)
 
-        return Panel(
-            table,
-            title=f"{title} ({len(builds)})",
-            border_style=self.theme.border,
-        )
+        return Text("\n".join(lines))
 
     def format_review_section(
         self, to_review: list[PullRequest], reviewed: list[PullRequest]
-    ) -> Panel:
+    ) -> Text:
         """
-        Format review section with PRs to review and reviewed PRs.
+        Format review section with PRs to review and reviewed PRs as a compact list.
 
         Args:
             to_review: PRs needing review
             reviewed: Recently reviewed PRs
 
         Returns:
-            Rich Panel with review information
+            Rich Text with review information
         """
         if not to_review and not reviewed:
-            return Panel(
-                Text("No reviews", style=self.theme.muted),
-                title="Reviews",
-                border_style=self.theme.border,
-            )
+            return Text("No reviews", style=self.theme.muted)
 
-        table = Table(show_header=True, header_style=self.theme.header, box=None)
-        table.add_column("", width=2)  # Review status icon
-        table.add_column("PR", width=6, style=self.theme.info)
-        table.add_column("Repository", style=self.theme.info)
-        table.add_column("Title", style=self.theme.text)
-        table.add_column("Author", style=self.theme.muted)
-        table.add_column("Updated", style=self.theme.muted, justify="right")
+        result = Text()
 
         # Add PRs to review first (highlighted)
         for pr in to_review:
             icon = "⏳"
-            title_text = truncate_text(pr.title, self.terminal_width // 3)
 
             if self._supports_links():
-                title_display = osc8_link(pr.url, title_text, fallback=False)
+                title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
-                title_display = title_text
+                title_display = pr.title
 
             provider_icon = get_provider_icon(pr.provider)
             pr_display = f"{provider_icon}#{pr.number}"
 
-            table.add_row(
-                icon,
-                pr_display,
-                pr.repo,
-                Text(title_display, style=self.theme.highlight),
-                pr.author,
-                relative_time(pr.updated_at) if pr.updated_at else "",
-            )
+            # Format: icon PR#number [repo] title (time ago)
+            time_str = relative_time(pr.updated_at) if pr.updated_at else ""
+            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
+            result.append(line, style=self.theme.highlight)
 
         # Add reviewed PRs (muted)
         for pr in reviewed:
@@ -281,31 +192,20 @@ class Formatter:
             else:
                 icon = "✓"
 
-            title_text = truncate_text(pr.title, self.terminal_width // 3)
-
             if self._supports_links():
-                title_display = osc8_link(pr.url, title_text, fallback=False)
+                title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
-                title_display = title_text
+                title_display = pr.title
 
             provider_icon = get_provider_icon(pr.provider)
             pr_display = f"{provider_icon}#{pr.number}"
 
-            table.add_row(
-                icon,
-                pr_display,
-                pr.repo,
-                Text(title_display, style=self.theme.muted),
-                pr.author,
-                relative_time(pr.updated_at) if pr.updated_at else "",
-            )
+            # Format: icon PR#number [repo] title (time ago)
+            time_str = relative_time(pr.updated_at) if pr.updated_at else ""
+            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
+            result.append(line, style=self.theme.muted)
 
-        total = len(to_review) + len(reviewed)
-        return Panel(
-            table,
-            title=f"Reviews ({len(to_review)} pending, {len(reviewed)} reviewed, {total} total)",
-            border_style=self.theme.border,
-        )
+        return result
 
     def format_section_header(self, title: str) -> Rule:
         """
