@@ -23,15 +23,15 @@ def test_relative_time() -> None:
 
     # Minutes ago
     past = now - timedelta(minutes=30)
-    assert "30m ago" in relative_time(past) or "29m ago" in relative_time(past)
+    assert "30m" in relative_time(past) or "29m" in relative_time(past)
 
     # Hours ago
     past = now - timedelta(hours=5)
-    assert "5h ago" in relative_time(past) or "4h ago" in relative_time(past)
+    assert "5h" in relative_time(past) or "4h" in relative_time(past)
 
     # Days ago
     past = now - timedelta(days=3)
-    assert "3d ago" in relative_time(past) or "2d ago" in relative_time(past)
+    assert "3d" in relative_time(past) or "2d" in relative_time(past)
 
 
 def test_get_status_icon() -> None:
@@ -39,11 +39,11 @@ def test_get_status_icon() -> None:
     # PR status
     assert get_status_icon("approved", "pr") == "[✓]"
     assert get_status_icon("merged", "pr") == "[M]"
-    assert get_status_icon("draft", "pr") == "[D]"
+    assert get_status_icon("draft", "pr") == "[…]"
     assert get_status_icon("changes_requested", "pr") == "[!]"
     assert get_status_icon("failed", "pr") == "[!]"
     assert get_status_icon("closed", "pr") == "[X]"
-    assert get_status_icon("pending", "pr") == "[○]"
+    assert get_status_icon("pending", "pr") == "[…]"
 
     # Build status
     assert get_status_icon("succeeded", "build") == "[✓]"
@@ -164,21 +164,65 @@ def test_filter_by_age() -> None:
 
 def test_osc8_link() -> None:
     """Test OSC 8 hyperlink generation."""
+    import os
+
     url = "https://github.com/owner/repo/pull/123"
     text = "PR #123"
 
-    # With fallback enabled (default)
-    link = osc8_link(url, text, fallback=True)
-    assert text in link
-    assert url in link
+    # Save original environment
+    orig_term = os.environ.get("TERM")
+    orig_term_program = os.environ.get("TERM_PROGRAM")
+    orig_lc_terminal = os.environ.get("LC_TERMINAL")
 
-    # Without fallback
-    link = osc8_link(url, text, fallback=False)
-    assert text in link
+    try:
+        # Test with iTerm2 (via TERM_PROGRAM)
+        os.environ["TERM"] = "xterm-256color"
+        os.environ["TERM_PROGRAM"] = "iTerm.app"
+        link = osc8_link(url, text, fallback=False)
+        assert "\x1b]8;;" in link
+        assert text in link
+        assert url in link
 
-    # Empty text - should return URL with parentheses
-    link = osc8_link(url, "", fallback=True)
-    assert url in link
+        # Test with iTerm2 (via LC_TERMINAL)
+        os.environ.pop("TERM_PROGRAM", None)
+        os.environ["LC_TERMINAL"] = "iTerm2"
+        link = osc8_link(url, text, fallback=False)
+        assert "\x1b]8;;" in link
+
+        # Test with kitty (via TERM)
+        os.environ.pop("LC_TERMINAL", None)
+        os.environ["TERM"] = "xterm-kitty"
+        link = osc8_link(url, text, fallback=False)
+        assert "\x1b]8;;" in link
+
+        # Test with unsupported terminal and fallback
+        os.environ["TERM"] = "xterm"
+        os.environ.pop("TERM_PROGRAM", None)
+        link = osc8_link(url, text, fallback=True)
+        assert text in link
+        assert url in link
+        assert "(" in link and ")" in link  # Fallback format
+
+        # Test without fallback on unsupported terminal
+        link = osc8_link(url, text, fallback=False)
+        assert "\x1b]8;;" in link  # Still generates OSC 8
+
+    finally:
+        # Restore original environment
+        if orig_term:
+            os.environ["TERM"] = orig_term
+        else:
+            os.environ.pop("TERM", None)
+
+        if orig_term_program:
+            os.environ["TERM_PROGRAM"] = orig_term_program
+        else:
+            os.environ.pop("TERM_PROGRAM", None)
+
+        if orig_lc_terminal:
+            os.environ["LC_TERMINAL"] = orig_lc_terminal
+        else:
+            os.environ.pop("LC_TERMINAL", None)
 
 
 def test_relative_time_edge_cases() -> None:
@@ -188,9 +232,9 @@ def test_relative_time_edge_cases() -> None:
     # Weeks ago - should show weeks
     past = now - timedelta(weeks=2)
     result = relative_time(past)
-    assert "2w ago" in result or "1w ago" in result
+    assert "2w" in result or "1w" in result
 
     # Months ago (more than 30 days)
     past = now - timedelta(days=45)
     result = relative_time(past)
-    assert "6w ago" in result or "1mo ago" in result or "45d ago" in result
+    assert "6w" in result or "1mo" in result or "45d" in result

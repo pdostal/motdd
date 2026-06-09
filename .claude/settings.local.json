@@ -23,7 +23,9 @@
       "Bash(glab auth *)",
       "Bash(osc user *)",
       "Bash(tea login *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(/workdir/.venv/bin/python3 *)",
+      "Bash(/tmp/test_real_terminal.sh)"
     ]
   }
 }

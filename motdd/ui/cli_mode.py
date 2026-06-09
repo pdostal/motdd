@@ -1,6 +1,7 @@
 """CLI mode output rendering."""
 
 import asyncio
+import os
 
 from rich.console import Console
 
@@ -43,14 +44,18 @@ class CLIMode:
         self.repo_filter = repo_filter
         self.verbose = verbose
         self.formatter = Formatter(theme_name=config.get_theme())
-        self.console = Console()
+        # Force terminal mode if TERM_PROGRAM or LC_TERMINAL suggests we're in a capable terminal
+        force_terminal = bool(os.environ.get("TERM_PROGRAM") or os.environ.get("LC_TERMINAL"))
+        self.console = Console(force_terminal=force_terminal or None)
 
     async def show_all(self) -> None:
         """Show all sections in priority order."""
         # Section order: reviews, PRs (includes OBS/IBS), notifications
         # OBS/IBS submit requests are now integrated into reviews and PRs sections
         await self.show_reviews()
+        self.console.print()  # Empty line after Reviews
         await self.show_my_prs()
+        self.console.print()  # Empty line after PRs
         await self.show_notifications()
 
     async def show_notifications(self) -> None:
@@ -83,8 +88,6 @@ class CLIMode:
 
         # Display OBS/IBS submit requests
         if obs_data or ibs_data:
-            if prs:  # Add spacing if we already printed PRs
-                self.console.print()
             build_output = self.formatter.format_builds(
                 obs_data + ibs_data, title="Submit Requests"
             )
@@ -115,8 +118,6 @@ class CLIMode:
 
         # Display OBS/IBS submit requests to review
         if obs_reviews or ibs_reviews:
-            if to_review or reviewed:  # Add spacing if we already printed PR reviews
-                self.console.print()
             sr_output = self.formatter.format_builds(
                 obs_reviews + ibs_reviews, title="Submit Requests to Review"
             )
@@ -212,8 +213,8 @@ class CLIMode:
             else:
                 all_prs.extend(result)
 
-        # Filter out merged PRs (only show open PRs needing review)
-        all_prs = [pr for pr in all_prs if pr.state != "merged"]
+        # Filter out merged and closed PRs (only show open PRs needing review)
+        all_prs = [pr for pr in all_prs if pr.state == "open"]
 
         # Sort by updated_at descending
         all_prs.sort(key=lambda x: x.updated_at or x.created_at, reverse=True)
@@ -238,8 +239,8 @@ class CLIMode:
         # Filter by age
         all_prs = filter_by_age(all_prs, days)
 
-        # Filter out merged PRs
-        all_prs = [pr for pr in all_prs if pr.state != "merged"]
+        # Filter out merged and closed PRs
+        all_prs = [pr for pr in all_prs if pr.state == "open"]
 
         # Sort by updated_at descending
         all_prs.sort(key=lambda x: x.updated_at or x.created_at, reverse=True)
@@ -277,6 +278,9 @@ class CLIMode:
                 if self.verbose:
                     self.console.print(self.formatter.format_error(provider.name, str(e)))
 
+        # Filter out builds with unknown status
+        all_builds = [b for b in all_builds if b.status != "unknown"]
+
         # Sort by updated_at if available
         all_builds.sort(key=lambda x: x.updated_at if x.updated_at else x.id, reverse=True)
         return all_builds
@@ -295,6 +299,9 @@ class CLIMode:
             except Exception as e:
                 if self.verbose:
                     self.console.print(self.formatter.format_error(provider.name, str(e)))
+
+        # Filter out builds with unknown status
+        all_builds = [b for b in all_builds if b.status != "unknown"]
 
         # Sort by updated_at if available
         all_builds.sort(key=lambda x: x.updated_at if x.updated_at else x.id, reverse=True)

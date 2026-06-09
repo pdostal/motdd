@@ -19,7 +19,15 @@ def osc8_link(url: str, text: str, fallback: bool = True) -> str:
     """
     # Check if terminal supports OSC 8
     term = os.environ.get("TERM", "")
-    supports_osc8 = any(t in term for t in ["kitty", "iterm", "wezterm", "alacritty"])
+    term_program = os.environ.get("TERM_PROGRAM", "")
+    lc_terminal = os.environ.get("LC_TERMINAL", "")
+
+    # Check various terminal indicators
+    supports_osc8 = (
+        any(t in term for t in ["kitty", "wezterm", "alacritty"])
+        or any(p in term_program.lower() for p in ["iterm", "wezterm", "kitty"])
+        or any(t in lc_terminal.lower() for t in ["iterm2"])
+    )
 
     if supports_osc8 or not fallback:
         # OSC 8 format: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
@@ -37,7 +45,7 @@ def relative_time(dt: datetime) -> str:
         dt: Datetime to convert
 
     Returns:
-        Relative time string like "2 hours ago" or "3 days ago"
+        Relative time string like "2h" or "3d" (without "ago" suffix)
     """
     now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
     diff = now - dt
@@ -46,22 +54,22 @@ def relative_time(dt: datetime) -> str:
         return "just now"
     elif diff < timedelta(hours=1):
         minutes = int(diff.total_seconds() / 60)
-        return f"{minutes}m ago"
+        return f"{minutes}m"
     elif diff < timedelta(days=1):
         hours = int(diff.total_seconds() / 3600)
-        return f"{hours}h ago"
+        return f"{hours}h"
     elif diff < timedelta(days=7):
         days = diff.days
-        return f"{days}d ago"
+        return f"{days}d"
     elif diff < timedelta(days=30):
         weeks = diff.days // 7
-        return f"{weeks}w ago"
+        return f"{weeks}w"
     elif diff < timedelta(days=365):
         months = diff.days // 30
-        return f"{months}mo ago"
+        return f"{months}mo"
     else:
         years = diff.days // 365
-        return f"{years}y ago"
+        return f"{years}y"
 
 
 def get_status_icon(status: str, status_type: str = "pr") -> str:
@@ -82,13 +90,13 @@ def get_status_icon(status: str, status_type: str = "pr") -> str:
         elif "merged" in status_lower:
             return "[M]"
         elif "draft" in status_lower:
-            return "[D]"
+            return "[…]"
         elif "changes" in status_lower or "failed" in status_lower:
             return "[!]"
         elif "closed" in status_lower:
             return "[X]"
         else:
-            return "[○]"
+            return "[…]"
 
     elif status_type == "build":
         status_lower = status.lower()
@@ -125,7 +133,7 @@ def get_status_icon(status: str, status_type: str = "pr") -> str:
         elif "changes" in status_lower:
             return "[!]"
         else:
-            return "[N]"
+            return "[…]"
 
     return "[?]"
 

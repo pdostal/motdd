@@ -51,7 +51,6 @@ class Formatter:
         lines = []
         for notif in notifications:
             icon = get_status_icon(notif.type, "notification")
-            provider_icon = get_provider_icon(notif.provider)
 
             # Get action text from notification type
             action = self._notification_action(notif.type)
@@ -64,10 +63,10 @@ class Formatter:
 
             # Format: icon action: title [repo] (time ago)
             time_str = relative_time(notif.updated_at)
-            line = f"{icon} {action}: {title_display} [{provider_icon} {notif.repo}] ({time_str})"
+            line = f"{icon} {action}: {title_display} [{notif.repo}] ({time_str} ago)"
             lines.append(line)
 
-        return Text("\n".join(lines))
+        return Text.from_ansi("\n".join(lines))
 
     def format_pull_requests(self, prs: list[PullRequest], title: str = "Pull Requests") -> Text:
         """
@@ -83,38 +82,24 @@ class Formatter:
         if not prs:
             return Text("No pull requests", style=self.theme.muted)
 
-        result = Text()
+        lines = []
         for pr in prs:
             # Determine status icon
-            if pr.draft:
-                icon = get_status_icon("draft", "pr")
-            elif pr.state == "merged":
-                icon = get_status_icon("merged", "pr")
-            elif pr.state == "closed":
-                icon = get_status_icon("closed", "pr")
-            elif pr.review_decision == "approved":
-                icon = get_status_icon("approved", "pr")
-            elif pr.review_decision == "changes_requested":
-                icon = get_status_icon("changes_requested", "pr")
-            else:
-                icon = get_status_icon("pending", "pr")
+            icon = self._get_pr_icon(pr)
 
-            # Format title with link
+            # Format title with hyperlink (only title is clickable)
             if self._supports_links():
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title
 
-            # Format PR number
-            provider_icon = get_provider_icon(pr.provider)
-            pr_display = f"{provider_icon}#{pr.number}"
-
-            # Format: icon PR#number [repo] title (time ago)
+            # Format line (no author, only title is clickable)
             time_str = relative_time(pr.updated_at) if pr.updated_at else ""
-            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
-            result.append(line)
+            line = f"{icon} {pr.repo} #{pr.number} {title_display} {time_str} ago"
 
-        return result
+            lines.append(line)
+
+        return Text.from_ansi("\n".join(lines))
 
     def format_builds(self, builds: list[BuildStatus], title: str = "Build Status") -> Text:
         """
@@ -147,10 +132,11 @@ class Formatter:
 
             # Format: icon type title [status] (time ago)
             time_str = relative_time(build.updated_at) if build.updated_at else ""
-            line = f"{icon} {type_display} {title_display} [{build.status}] ({time_str})"
+            time_suffix = f" ({time_str} ago)" if build.updated_at else ""
+            line = f"{icon} {type_display} {title_display} [{build.status}]{time_suffix}"
             lines.append(line)
 
-        return Text("\n".join(lines))
+        return Text.from_ansi("\n".join(lines))
 
     def format_review_section(
         self, to_review: list[PullRequest], reviewed: list[PullRequest]
@@ -171,42 +157,54 @@ class Formatter:
         result = Text()
 
         # Add PRs to review first (highlighted)
-        for pr in to_review:
+        for i, pr in enumerate(to_review):
             icon = "[…]"
 
+            # Format title with hyperlink (only title is clickable)
             if self._supports_links():
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title
 
-            provider_icon = get_provider_icon(pr.provider)
-            pr_display = f"{provider_icon}#{pr.number}"
-
-            # Format: icon PR#number [repo] title (time ago)
+            # Format line with author
             time_str = relative_time(pr.updated_at) if pr.updated_at else ""
-            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
-            result.append(line, style=self.theme.highlight)
+            line = f"{icon} {pr.repo} #{pr.number} by {pr.author}: {title_display} {time_str} ago"
+
+            # Parse ANSI codes (including OSC 8) and apply style
+            parsed_line = Text.from_ansi(line)
+            parsed_line.stylize(self.theme.highlight)
+            result.append(parsed_line)
+
+            # Add newline except for last item (if no reviewed PRs)
+            if i < len(to_review) - 1 or reviewed:
+                result.append("\n")
 
         # Add reviewed PRs (muted)
-        for pr in reviewed:
+        for i, pr in enumerate(reviewed):
             # Determine review icon
             if pr.review_restarted:
                 icon = "[↻]"
             else:
                 icon = "[✓]"
 
+            # Format title with hyperlink (only title is clickable)
             if self._supports_links():
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title
 
-            provider_icon = get_provider_icon(pr.provider)
-            pr_display = f"{provider_icon}#{pr.number}"
-
-            # Format: icon PR#number [repo] title (time ago)
+            # Format line with author
             time_str = relative_time(pr.updated_at) if pr.updated_at else ""
-            line = f"{icon} {pr_display} [{pr.repo}] {title_display} ({time_str})\n"
-            result.append(line, style=self.theme.muted)
+            line = f"{icon} {pr.repo} #{pr.number} by {pr.author}: {title_display} {time_str} ago"
+
+            # Parse ANSI codes (including OSC 8) and apply style
+            parsed_line = Text.from_ansi(line)
+            parsed_line.stylize(self.theme.muted)
+            result.append(parsed_line)
+
+            # Add newline except for last item
+            if i < len(reviewed) - 1:
+                result.append("\n")
 
         return result
 
@@ -277,7 +275,36 @@ class Formatter:
             # Default: capitalize the type
             return notification_type.replace("_", " ").title()
 
+    def _get_pr_icon(self, pr: PullRequest) -> str:
+        """
+        Get icon for a pull request based on state and review status.
+
+        Args:
+            pr: Pull request
+
+        Returns:
+            Icon string
+        """
+        if pr.state == "merged":
+            return "[M]"
+        elif pr.state == "closed":
+            return "[X]"
+        elif pr.review_decision == "approved":
+            return "[✓]"
+        elif pr.review_decision == "changes_requested":
+            return "[!]"
+        else:
+            # pending, open, or draft - all use […]
+            return "[…]"
+
     def _supports_links(self) -> bool:
         """Check if terminal supports OSC 8 hyperlinks."""
         term = os.environ.get("TERM", "")
-        return any(t in term for t in ["kitty", "iterm", "wezterm", "alacritty"])
+        term_program = os.environ.get("TERM_PROGRAM", "")
+        lc_terminal = os.environ.get("LC_TERMINAL", "")
+
+        return (
+            any(t in term for t in ["kitty", "wezterm", "alacritty"])
+            or any(p in term_program.lower() for p in ["iterm", "wezterm", "kitty"])
+            or any(t in lc_terminal.lower() for t in ["iterm2"])
+        )
