@@ -77,53 +77,57 @@ def get_status_icon(status: str, status_type: str = "pr") -> str:
     """
     if status_type == "pr":
         status_lower = status.lower()
-        if "approved" in status_lower or "merged" in status_lower:
-            return "🟢"
+        if "approved" in status_lower:
+            return "[✓]"
+        elif "merged" in status_lower:
+            return "[M]"
         elif "draft" in status_lower:
-            return "🔵"
+            return "[D]"
         elif "changes" in status_lower or "failed" in status_lower:
-            return "🔴"
+            return "[!]"
+        elif "closed" in status_lower:
+            return "[X]"
         else:
-            return "🟡"
+            return "[○]"
 
     elif status_type == "build":
         status_lower = status.lower()
         if "succeed" in status_lower or "success" in status_lower:
-            return "✓"
+            return "[✓]"
         elif "fail" in status_lower or "error" in status_lower:
-            return "✗"
+            return "[✗]"
         elif "building" in status_lower or "pending" in status_lower:
-            return "⏳"
+            return "[…]"
         elif "disabled" in status_lower:
-            return "⊘"
+            return "[-]"
         else:
-            return "?"
+            return "[?]"
 
     elif status_type == "review":
         status_lower = status.lower()
         if "approved" in status_lower or "reviewed" in status_lower:
-            return "✓"
+            return "[✓]"
         elif "restart" in status_lower or "dismiss" in status_lower:
-            return "♺"
+            return "[↻]"
         elif "pending" in status_lower or "requested" in status_lower:
-            return "⏳"
+            return "[…]"
         else:
-            return "?"
+            return "[?]"
 
     elif status_type == "notification":
         status_lower = status.lower()
         if "review" in status_lower:
-            return "👁"
+            return "[R]"
         elif "mention" in status_lower or "comment" in status_lower:
-            return "💬"
+            return "[C]"
         elif "approv" in status_lower:
-            return "✅"
+            return "[✓]"
         elif "changes" in status_lower:
-            return "❌"
+            return "[!]"
         else:
-            return "📬"
+            return "[N]"
 
-    return "?"
+    return "[?]"
 
 
 def get_provider_icon(provider: str) -> str:
@@ -138,17 +142,19 @@ def get_provider_icon(provider: str) -> str:
     """
     provider_lower = provider.lower()
     if "github" in provider_lower:
-        return "🐙"
+        return "gh"
     elif "gitlab" in provider_lower:
-        return "🦊"
+        return "gl"
     elif "forgejo" in provider_lower:
-        return "🍵"
+        return "fj"
     elif "gitea" in provider_lower:
-        return "🍃"
-    elif "obs" in provider_lower or "ibs" in provider_lower:
-        return "📦"
+        return "gt"
+    elif "obs" in provider_lower:
+        return "obs"
+    elif "ibs" in provider_lower:
+        return "ibs"
     else:
-        return "🔧"
+        return "git"
 
 
 def open_in_browser(url: str) -> None:

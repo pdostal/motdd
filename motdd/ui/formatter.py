@@ -169,7 +169,7 @@ class Formatter:
 
         # Add PRs to review first (highlighted)
         for pr in to_review:
-            icon = "⏳"
+            icon = "[…]"
 
             if self._supports_links():
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
@@ -188,9 +188,9 @@ class Formatter:
         for pr in reviewed:
             # Determine review icon
             if pr.review_restarted:
-                icon = "♺"
+                icon = "[↻]"
             else:
-                icon = "✓"
+                icon = "[✓]"
 
             if self._supports_links():
                 title_display = osc8_link(pr.url, pr.title, fallback=False)

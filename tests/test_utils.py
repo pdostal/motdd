@@ -37,41 +37,42 @@ def test_relative_time() -> None:
 def test_get_status_icon() -> None:
     """Test status icon selection."""
     # PR status
-    assert get_status_icon("approved", "pr") == "🟢"
-    assert get_status_icon("merged", "pr") == "🟢"
-    assert get_status_icon("draft", "pr") == "🔵"
-    assert get_status_icon("changes_requested", "pr") == "🔴"
-    assert get_status_icon("failed", "pr") == "🔴"
-    assert get_status_icon("pending", "pr") == "🟡"
+    assert get_status_icon("approved", "pr") == "[✓]"
+    assert get_status_icon("merged", "pr") == "[M]"
+    assert get_status_icon("draft", "pr") == "[D]"
+    assert get_status_icon("changes_requested", "pr") == "[!]"
+    assert get_status_icon("failed", "pr") == "[!]"
+    assert get_status_icon("closed", "pr") == "[X]"
+    assert get_status_icon("pending", "pr") == "[○]"
 
     # Build status
-    assert get_status_icon("succeeded", "build") == "✓"
-    assert get_status_icon("success", "build") == "✓"
-    assert get_status_icon("failed", "build") == "✗"
-    assert get_status_icon("building", "build") == "⏳"
-    assert get_status_icon("disabled", "build") == "⊘"
+    assert get_status_icon("succeeded", "build") == "[✓]"
+    assert get_status_icon("success", "build") == "[✓]"
+    assert get_status_icon("failed", "build") == "[✗]"
+    assert get_status_icon("building", "build") == "[…]"
+    assert get_status_icon("disabled", "build") == "[-]"
 
     # Review status
-    assert get_status_icon("approved", "review") == "✓"
-    assert get_status_icon("restarted", "review") == "♺"
-    assert get_status_icon("pending", "review") == "⏳"
+    assert get_status_icon("approved", "review") == "[✓]"
+    assert get_status_icon("restarted", "review") == "[↻]"
+    assert get_status_icon("pending", "review") == "[…]"
 
     # Notification status
-    assert get_status_icon("review_request", "notification") == "👁"
-    assert get_status_icon("comment", "notification") == "💬"
-    assert get_status_icon("approved", "notification") == "✅"
-    assert get_status_icon("changes_requested", "notification") == "❌"
+    assert get_status_icon("review_request", "notification") == "[R]"
+    assert get_status_icon("comment", "notification") == "[C]"
+    assert get_status_icon("approved", "notification") == "[✓]"
+    assert get_status_icon("changes_requested", "notification") == "[!]"
 
 
 def test_get_provider_icon() -> None:
     """Test provider icon selection."""
-    assert get_provider_icon("github") == "🐙"
-    assert get_provider_icon("gitlab") == "🦊"
-    assert get_provider_icon("forgejo") == "🍵"
-    assert get_provider_icon("gitea") == "🍃"
-    assert get_provider_icon("obs") == "📦"
-    assert get_provider_icon("ibs") == "📦"
-    assert get_provider_icon("unknown") == "🔧"
+    assert get_provider_icon("github") == "gh"
+    assert get_provider_icon("gitlab") == "gl"
+    assert get_provider_icon("forgejo") == "fj"
+    assert get_provider_icon("gitea") == "gt"
+    assert get_provider_icon("obs") == "obs"
+    assert get_provider_icon("ibs") == "ibs"
+    assert get_provider_icon("unknown") == "git"
 
 
 def test_truncate_text() -> None:
