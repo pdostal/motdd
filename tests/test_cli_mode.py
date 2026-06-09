@@ -226,12 +226,14 @@ async def test_show_my_prs(cli_mode):
     """Test showing my PRs."""
     with (
         patch.object(cli_mode, "_get_my_prs", new_callable=AsyncMock, return_value=[]),
+        patch.object(cli_mode, "_get_obs_data", new_callable=AsyncMock, return_value=[]),
+        patch.object(cli_mode, "_get_ibs_data", new_callable=AsyncMock, return_value=[]),
         patch("motdd.ui.cli_mode.Console.print") as mock_print,
     ):
         await cli_mode.show_my_prs()
 
-    # Should print section header and panel (2 calls)
-    assert mock_print.call_count == 2
+    # Should print section header (1 call) - no PRs or builds to display
+    assert mock_print.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -240,12 +242,14 @@ async def test_show_reviews(cli_mode):
     with (
         patch.object(cli_mode, "_get_prs_to_review", new_callable=AsyncMock, return_value=[]),
         patch.object(cli_mode, "_get_reviewed_prs", new_callable=AsyncMock, return_value=[]),
+        patch.object(cli_mode, "_get_obs_data", new_callable=AsyncMock, return_value=[]),
+        patch.object(cli_mode, "_get_ibs_data", new_callable=AsyncMock, return_value=[]),
         patch("motdd.ui.cli_mode.Console.print") as mock_print,
     ):
         await cli_mode.show_reviews()
 
-    # Should print section header and panel (2 calls)
-    assert mock_print.call_count == 2
+    # Should print section header (1 call) - no PRs or builds to display
+    assert mock_print.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -255,14 +259,10 @@ async def test_show_all(cli_mode):
         patch.object(cli_mode, "show_reviews", new_callable=AsyncMock) as mock_reviews,
         patch.object(cli_mode, "show_my_prs", new_callable=AsyncMock) as mock_prs,
         patch.object(cli_mode, "show_notifications", new_callable=AsyncMock) as mock_notifs,
-        patch.object(cli_mode, "show_obs", new_callable=AsyncMock) as mock_obs,
-        patch.object(cli_mode, "show_ibs", new_callable=AsyncMock) as mock_ibs,
     ):
         await cli_mode.show_all()
 
-        # All sections should be called
+        # Main sections should be called (OBS/IBS now integrated into reviews and PRs)
         mock_reviews.assert_awaited_once()
         mock_prs.assert_awaited_once()
         mock_notifs.assert_awaited_once()
-        mock_obs.assert_awaited_once()
-        mock_ibs.assert_awaited_once()

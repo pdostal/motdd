@@ -47,12 +47,11 @@ class CLIMode:
 
     async def show_all(self) -> None:
         """Show all sections in priority order."""
-        # Section order: reviews, PRs, notifications, OBS, IBS
+        # Section order: reviews, PRs (includes OBS/IBS), notifications
+        # OBS/IBS submit requests are now integrated into reviews and PRs sections
         await self.show_reviews()
         await self.show_my_prs()
         await self.show_notifications()
-        await self.show_obs()
-        await self.show_ibs()
 
     async def show_notifications(self) -> None:
         """Show notifications section."""
@@ -66,28 +65,62 @@ class CLIMode:
         self.console.print(output)
 
     async def show_my_prs(self) -> None:
-        """Show my PRs section."""
-        self.console.print(self.formatter.format_section_header("Pull Requests"))
+        """Show my PRs and submit requests section."""
+        self.console.print(self.formatter.format_section_header("Pull Requests & Submit Requests"))
         prs = await self._get_my_prs()
+
+        # Get OBS/IBS submit requests
+        obs_data = await self._get_obs_data()
+        ibs_data = await self._get_ibs_data()
 
         if self.repo_filter:
             prs = filter_by_repo(prs, self.repo_filter)
 
-        output = self.formatter.format_pull_requests(prs, title="My Pull Requests")
-        self.console.print(output)
+        # Display PRs first
+        if prs:
+            pr_output = self.formatter.format_pull_requests(prs, title="My Pull Requests")
+            self.console.print(pr_output)
+
+        # Display OBS/IBS submit requests
+        if obs_data or ibs_data:
+            if prs:  # Add spacing if we already printed PRs
+                self.console.print()
+            build_output = self.formatter.format_builds(
+                obs_data + ibs_data, title="Submit Requests"
+            )
+            self.console.print(build_output)
 
     async def show_reviews(self) -> None:
-        """Show reviews section."""
+        """Show reviews section (PRs and submit requests to review)."""
         self.console.print(self.formatter.format_section_header("Reviews"))
         to_review = await self._get_prs_to_review()
         reviewed = await self._get_reviewed_prs()
+
+        # Get OBS/IBS submit requests needing review
+        obs_data = await self._get_obs_data()
+        ibs_data = await self._get_ibs_data()
+
+        # Filter to only items in "review" state
+        obs_reviews = [b for b in obs_data if b.status.lower() == "review"]
+        ibs_reviews = [b for b in ibs_data if b.status.lower() == "review"]
 
         if self.repo_filter:
             to_review = filter_by_repo(to_review, self.repo_filter)
             reviewed = filter_by_repo(reviewed, self.repo_filter)
 
-        output = self.formatter.format_review_section(to_review, reviewed)
-        self.console.print(output)
+        # Display PR reviews
+        if to_review or reviewed:
+            pr_output = self.formatter.format_review_section(to_review, reviewed)
+            self.console.print(pr_output)
+
+        # Display OBS/IBS submit requests to review
+        if obs_reviews or ibs_reviews:
+            if to_review or reviewed:  # Add spacing if we already printed PR reviews
+                self.console.print()
+            sr_output = self.formatter.format_builds(
+                obs_reviews + ibs_reviews, title="Submit Requests to Review"
+            )
+            self.console.print(sr_output)
 
     async def show_user_prs(self, username: str, provider: str | None = None) -> None:
         """
