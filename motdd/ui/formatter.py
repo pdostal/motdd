@@ -56,7 +56,7 @@ class Formatter:
             action = self._notification_action(notif.type)
 
             # Format title with link
-            if self._supports_links():
+            if self._supports_links() and notif.url:
                 title_display = osc8_link(notif.url, notif.title, fallback=False)
             else:
                 title_display = notif.title
@@ -88,7 +88,7 @@ class Formatter:
             icon = self._get_pr_icon(pr)
 
             # Format title with hyperlink (only title is clickable)
-            if self._supports_links():
+            if self._supports_links() and pr.url:
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title
@@ -161,7 +161,7 @@ class Formatter:
             icon = "[…]"
 
             # Format title with hyperlink (only title is clickable)
-            if self._supports_links():
+            if self._supports_links() and pr.url:
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title
@@ -188,7 +188,7 @@ class Formatter:
                 icon = "[✓]"
 
             # Format title with hyperlink (only title is clickable)
-            if self._supports_links():
+            if self._supports_links() and pr.url:
                 title_display = osc8_link(pr.url, pr.title, fallback=False)
             else:
                 title_display = pr.title

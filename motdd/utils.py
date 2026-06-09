@@ -17,6 +17,10 @@ def osc8_link(url: str, text: str, fallback: bool = True) -> str:
     Returns:
         Formatted link string
     """
+    # Guard: return plain text if no URL
+    if not url:
+        return text
+
     # Check if terminal supports OSC 8
     term = os.environ.get("TERM", "")
     term_program = os.environ.get("TERM_PROGRAM", "")

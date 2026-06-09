@@ -238,3 +238,28 @@ def test_relative_time_edge_cases() -> None:
     past = now - timedelta(days=45)
     result = relative_time(past)
     assert "6w" in result or "1mo" in result or "45d" in result
+
+
+def test_osc8_link_empty_url() -> None:
+    """Test OSC 8 hyperlink with empty URL returns plain text."""
+    text = "Agent Session Finished"
+
+    # Empty string URL
+    result = osc8_link("", text, fallback=False)
+    assert result == text
+    assert "\x1b]8;;" not in result  # No OSC 8 sequences
+
+    # Empty string URL with fallback
+    result = osc8_link("", text, fallback=True)
+    assert result == text
+    assert "\x1b]8;;" not in result
+
+
+def test_osc8_link_none_url() -> None:
+    """Test OSC 8 hyperlink with None URL returns plain text."""
+    text = "Notification without URL"
+
+    # None URL (falsy value)
+    result = osc8_link(None, text, fallback=False)  # type: ignore
+    assert result == text
+    assert "\x1b]8;;" not in result

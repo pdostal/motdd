@@ -326,3 +326,49 @@ def test_format_review_section_with_restarted() -> None:
 
     output = formatter.format_review_section([], reviewed)
     assert isinstance(output, Text)
+
+
+def test_format_notifications_without_url() -> None:
+    """Test formatting notifications with empty URLs renders as plain text."""
+    formatter = Formatter()
+
+    notifications = [
+        # Notification with URL (should have hyperlink)
+        Notification(
+            id="1",
+            provider="github",
+            type="pr_review_request",
+            title="Review my PR",
+            repo="org/repo",
+            url="https://github.com/org/repo/pull/1",
+            updated_at=datetime.now(),
+        ),
+        # Notification without URL (agent_session_finished)
+        Notification(
+            id="2",
+            provider="github",
+            type="agent_session_finished",
+            title="Agent Session Finished: Documenting commit message checker",
+            repo="os-autoinst/os-autoinst-distri-opensuse",
+            url="",  # Empty URL
+            updated_at=datetime.now(),
+        ),
+    ]
+
+    output = formatter.format_notifications(notifications)
+
+    assert isinstance(output, Text)
+    output_str = str(output)
+
+    # First notification should appear
+    assert "Review my PR" in output_str
+
+    # Second notification should appear as plain text (no OSC 8 with empty URL)
+    assert "Agent Session Finished" in output_str
+    assert "Documenting commit message checker" in output_str
+
+    # Verify no invalid OSC 8 sequences (OSC 8 with empty URL)
+    # Valid OSC 8: \x1b]8;;URL\x1b\\ (has URL between semicolons)
+    # Invalid OSC 8: \x1b]8;;\x1b\\ (empty URL)
+    # We can't easily check the raw ANSI codes, but we can verify the title appears
+    assert "os-autoinst/os-autoinst-distri-opensuse" in output_str
