@@ -53,15 +53,18 @@ class Formatter:
             icon = get_status_icon(notif.type, "notification")
             provider_icon = get_provider_icon(notif.provider)
 
+            # Get action text from notification type
+            action = self._notification_action(notif.type)
+
             # Format title with link
             if self._supports_links():
                 title_display = osc8_link(notif.url, notif.title, fallback=False)
             else:
                 title_display = notif.title
 
-            # Format: icon [repo] title (time ago)
+            # Format: icon action: title [repo] (time ago)
             time_str = relative_time(notif.updated_at)
-            line = f"{icon} [{provider_icon} {notif.repo}] {title_display} ({time_str})"
+            line = f"{icon} {action}: {title_display} [{provider_icon} {notif.repo}] ({time_str})"
             lines.append(line)
 
         return Text("\n".join(lines))
@@ -235,6 +238,44 @@ class Formatter:
             title=f"{provider} (Error)",
             border_style=self.theme.error,
         )
+
+    def _notification_action(self, notification_type: str) -> str:
+        """
+        Convert notification type to action text.
+
+        Args:
+            notification_type: Type of notification
+
+        Returns:
+            Action description
+        """
+        type_lower = notification_type.lower()
+
+        if "review" in type_lower and "request" in type_lower:
+            return "Review requested"
+        elif "mention" in type_lower:
+            return "Mentioned"
+        elif "comment" in type_lower:
+            return "Commented"
+        elif "security" in type_lower or "alert" in type_lower:
+            return "Security alert"
+        elif "approved" in type_lower or "approve" in type_lower:
+            return "Approved"
+        elif "changes" in type_lower:
+            return "Changes requested"
+        elif "assigned" in type_lower:
+            return "Assigned"
+        elif "ci" in type_lower or "check" in type_lower:
+            return "CI activity"
+        elif "push" in type_lower:
+            return "New commits"
+        elif "team" in type_lower:
+            return "Team mention"
+        elif "discussion" in type_lower:
+            return "Discussion"
+        else:
+            # Default: capitalize the type
+            return notification_type.replace("_", " ").title()
 
     def _supports_links(self) -> bool:
         """Check if terminal supports OSC 8 hyperlinks."""
